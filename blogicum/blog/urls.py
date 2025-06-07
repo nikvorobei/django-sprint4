@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import PostCreateView, PostDetailView
+from .views import PostCreateView, PostDetailView, PostDeleteView
 from django.contrib.auth.views import PasswordChangeView
 from django.urls import reverse_lazy
 
@@ -23,21 +23,21 @@ urlpatterns = [
     path('posts/<int:pk>/edit/', views.PostUpdateView.as_view(), name='post_edit'),
     
     # Удаление поста
-    path('posts/<int:pk>/delete/', views.PostDeleteView.as_view(), name='post_delete'),
+    path('posts/<int:pk>/delete/', PostDeleteView.as_view(), name='delete_post'),
     
     # Комментарии
     path('posts/<int:pk>/comment/', views.CommentCreateView.as_view(), name='add_comment'),
     path('comments/<int:pk>/edit/', views.CommentUpdateView.as_view(), name='edit_comment'),
     path('comments/<int:pk>/delete/', views.CommentDeleteView.as_view(), name='delete_comment'),
     
-    # Профиль пользователя
+    path('profile/edit/',
+         views.ProfileUpdateView.as_view(template_name='blog/create.html'),
+         name='edit_profile'),
     path('profile/<str:username>/', views.ProfileView.as_view(), name='profile'),
     
     # Регистрация
     path('registration/', views.RegistrationView.as_view(), name='registration'),
     path('posts/<int:post_id>/edit/', views.PostUpdateView.as_view(), name='edit_post'),
-    path('profile/<str:username>/', views.ProfileView.as_view(), name='profile'),
-    path('profile/edit/', views.ProfileUpdateView.as_view(), name='edit_profile'),
     path('profile/change-password/',
          PasswordChangeView.as_view(
              template_name='blog/change_password.html',

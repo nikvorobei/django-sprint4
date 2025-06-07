@@ -24,7 +24,7 @@ class PostDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['comments'] = Comment.objects.filter(post=self.object).order_by('-pub_date')
+        context['comments'] = Comment.objects.filter(post=self.object).order_by('-created_at')
         return context
 
 class PostCreateView(LoginRequiredMixin, CreateView):
@@ -48,14 +48,18 @@ class PostUpdateView(UpdateView):
     def get_success_url(self):
         return reverse('blog:post_detail', kwargs={'post_id': self.object.id})
 
-class PostDeleteView(LoginRequiredMixin, DeleteView):
+class PostDeleteView(DeleteView):
     model = Post
-    success_url = reverse_lazy('index')
+    success_url = reverse_lazy('blog:index')  # Редирект после удаления
 
-    def dispatch(self, request, *args, **kwargs):
-        if self.get_object().author != request.user:
-            return redirect('post_detail', pk=self.kwargs['pk'])
-        return super().dispatch(request, *args, **kwargs)
+    def get(self, request, *args, **kwargs):
+        """Пропускаем GET-запрос и сразу удаляем (только через POST)."""
+        return self.post(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        """Добавляем сообщение об успешном удалении."""
+        messages.success(request, 'Пост успешно удалён!')
+        return super().delete(request, *args, **kwargs)
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
     model = Comment
@@ -130,14 +134,17 @@ def category_posts(request, category_slug):
 
 class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     model = User
-    template_name = 'blog/profile_edit.html'
     fields = ['first_name', 'last_name', 'username', 'email']
+    template_name = 'blog/create.html'  # Используем существующий шаблон
+    success_url = reverse_lazy('blog:index')
 
     def get_object(self, queryset=None):
         return self.request.user
 
-    def get_success_url(self):
-        return reverse_lazy('blog:profile', kwargs={'username': self.request.user.username})
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form_title'] = 'Редактирование профиля'
+        return context
 
 @login_required
 def profile(request, username):
