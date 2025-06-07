@@ -11,7 +11,7 @@ urlpatterns = [
     path('', views.PostListView.as_view(), name='index'),
     
     # Детали поста (используем PostDetailView вместо post_detail функции)
-    path('posts/<int:pk>/', views.PostDetailView.as_view(), name='post_detail'),
+    path('posts/<int:pk>/', PostDetailView.as_view(), name='post_detail'),
     
     # Категории (если у вас есть CategoryView в views.py)
     path('category/<slug:category_slug>/', views.category_posts, name='category_posts'),
