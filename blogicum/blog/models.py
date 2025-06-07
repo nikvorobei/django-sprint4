@@ -21,7 +21,8 @@ class Location(models.Model):
 class Post(models.Model):
     title = models.CharField(max_length=256)
     text = models.TextField()
-    pub_date = models.DateTimeField()
+    pub_date = models.DateTimeField('Дата публикации')
+    created_at = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
