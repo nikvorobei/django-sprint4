@@ -16,7 +16,6 @@ urlpatterns = [
     path('posts/<int:pk>/comment/', views.CommentCreateView.as_view(), name='add_comment'),
     path('posts/<int:pk>/edit_comment/<int:comment_id>/', views.CommentUpdateView.as_view(), name='edit_comment'),
     path('posts/<int:pk>/delete_comment/<int:comment_id>/', views.CommentDeleteView.as_view(), name='delete_comment'),
-    path('', include('blog.urls')),
     path('', include('blog.urls', namespace='blog')),
     path('pages/', include('pages.urls')),
 ]

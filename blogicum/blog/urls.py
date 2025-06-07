@@ -33,4 +33,5 @@ urlpatterns = [
     
     # Регистрация
     path('registration/', views.RegistrationView.as_view(), name='registration'),
+    path('posts/<int:post_id>/edit/', views.PostUpdateView.as_view(), name='edit_post'),
 ]

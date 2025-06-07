@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.views.generic import (
     CreateView, UpdateView, DeleteView, DetailView, ListView
@@ -8,6 +8,8 @@ from django.views.generic import (
 from django.core.paginator import Paginator
 from .models import Post, Comment, Category
 from django.contrib.auth.forms import UserCreationForm
+from .forms import PostForm, CommentForm
+from django.contrib.auth.decorators import login_required
 
 User = get_user_model()
 
@@ -37,15 +39,14 @@ class PostCreateView(LoginRequiredMixin, CreateView):
     def get_success_url(self):
         return reverse('profile', kwargs={'username': self.request.user.username})
 
-class PostUpdateView(LoginRequiredMixin, UpdateView):
+class PostUpdateView(UpdateView):
     model = Post
-    fields = ['title', 'text', 'category', 'location', 'image', 'pub_date']
+    form_class = PostForm
     template_name = 'blog/create.html'
+    pk_url_kwarg = 'post_id'
 
-    def dispatch(self, request, *args, **kwargs):
-        if self.get_object().author != request.user:
-            return redirect('post_detail', pk=self.kwargs['pk'])
-        return super().dispatch(request, *args, **kwargs)
+    def get_success_url(self):
+        return reverse('blog:post_detail', kwargs={'post_id': self.object.id})
 
 class PostDeleteView(LoginRequiredMixin, DeleteView):
     model = Post
@@ -125,3 +126,18 @@ def category_posts(request, category_slug):
         'page_obj': page_obj,
     }
     return render(request, 'blog/category.html', context)
+
+@login_required
+def profile(request, username):
+    profile_user = get_object_or_404(User, username=username)
+    post_list = Post.objects.filter(author=profile_user).order_by('-pub_date')
+    
+    paginator = Paginator(post_list, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'profile_user': profile_user,
+        'page_obj': page_obj,
+    }
+    return render(request, 'blog/profile.html', context)
