@@ -24,12 +24,12 @@ class PostDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['comments'] = Comment.objects.filter(post=self.object).order_by('created_at')
+        context['comments'] = Comment.objects.filter(post=self.object).order_by('-pub_date')
         return context
 
 class PostCreateView(LoginRequiredMixin, CreateView):
     model = Post
-    fields = ['title', 'text', 'category', 'location', 'image', 'pub_date']
+    form_class = PostForm
     template_name = 'blog/create.html'
 
     def form_valid(self, form):
@@ -37,7 +37,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse('profile', kwargs={'username': self.request.user.username})
+        return reverse('blog:profile', kwargs={'username': self.request.user.username})
 
 class PostUpdateView(UpdateView):
     model = Post
@@ -99,10 +99,11 @@ class ProfileView(DetailView):
     template_name = 'blog/profile.html'
     slug_field = 'username'
     slug_url_kwarg = 'username'
+    context_object_name = 'profile'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['post_list'] = Post.objects.filter(author=self.object).order_by('-pub_date')
+        context['posts'] = self.object.posts.all().order_by('-pub_date')
         return context
 
 class RegistrationView(CreateView):
@@ -126,6 +127,17 @@ def category_posts(request, category_slug):
         'page_obj': page_obj,
     }
     return render(request, 'blog/category.html', context)
+
+class ProfileUpdateView(LoginRequiredMixin, UpdateView):
+    model = User
+    template_name = 'blog/profile_edit.html'
+    fields = ['first_name', 'last_name', 'username', 'email']
+
+    def get_object(self, queryset=None):
+        return self.request.user
+
+    def get_success_url(self):
+        return reverse_lazy('blog:profile', kwargs={'username': self.request.user.username})
 
 @login_required
 def profile(request, username):

@@ -1,6 +1,8 @@
 from django.urls import path
 from . import views
 from .views import PostCreateView, PostDetailView
+from django.contrib.auth.views import PasswordChangeView
+from django.urls import reverse_lazy
 
 app_name = 'blog'
 
@@ -34,4 +36,12 @@ urlpatterns = [
     # Регистрация
     path('registration/', views.RegistrationView.as_view(), name='registration'),
     path('posts/<int:post_id>/edit/', views.PostUpdateView.as_view(), name='edit_post'),
+    path('profile/<str:username>/', views.ProfileView.as_view(), name='profile'),
+    path('profile/edit/', views.ProfileUpdateView.as_view(), name='edit_profile'),
+    path('profile/change-password/',
+         PasswordChangeView.as_view(
+             template_name='blog/change_password.html',
+             success_url=reverse_lazy('blog:index')
+         ),
+         name='change_password'),
 ]

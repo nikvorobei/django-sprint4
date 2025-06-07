@@ -22,7 +22,12 @@ class Post(models.Model):
     title = models.CharField(max_length=256)
     text = models.TextField()
     pub_date = models.DateTimeField()
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='posts',
+        verbose_name='Автор'
+    )
     location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True)
     image = models.ImageField(upload_to='posts/', blank=True, null=True)
