@@ -137,7 +137,7 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     model = User
     fields = ['first_name', 'last_name', 'username', 'email']
     template_name = 'blog/create.html'  # Используем существующий шаблон
-    success_url = reverse_lazy('blog:index')
+    
 
     def get_object(self, queryset=None):
         return self.request.user
@@ -146,6 +146,9 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         context['form_title'] = 'Редактирование профиля'
         return context
+    
+    def get_success_url(self):
+        return reverse_lazy('blog:profile', kwargs={'username': self.request.user.username})
 
 @login_required
 def profile(request, username):
@@ -161,3 +164,22 @@ def profile(request, username):
         'page_obj': page_obj,
     }
     return render(request, 'blog/profile.html', context)
+
+def post_detail(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    comments = post.comments.all().order_by('created_at')
+    form = CommentForm(request.POST or None)
+    
+    if request.method == 'POST' and form.is_valid():
+        comment = form.save(commit=False)
+        comment.post = post
+        comment.author = request.user
+        comment.save()
+        return redirect('blog:post_detail', pk=pk)
+    
+    context = {
+        'post': post,
+        'comments': comments,
+        'form': form,
+    }
+    return render(request, 'blog/detail.html', context)
