@@ -152,15 +152,16 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
 
 @login_required
 def profile(request, username):
-    profile_user = get_object_or_404(User, username=username)
-    post_list = Post.objects.filter(author=profile_user).order_by('-pub_date')
-    
+    profile = get_object_or_404(User, username=username)
+    post_list = Post.objects.filter(
+    author=profile,
+).order_by('-pub_date')
     paginator = Paginator(post_list, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
     context = {
-        'profile_user': profile_user,
+        'profile': profile,
         'page_obj': page_obj,
     }
     return render(request, 'blog/profile.html', context)
