@@ -27,8 +27,12 @@ urlpatterns = [
     
     # Комментарии
     path('posts/<int:post_id>/comment/', views.CommentCreateView.as_view(), name='add_comment'),
-    path('comments/<int:pk>/edit/', views.CommentUpdateView.as_view(), name='edit_comment'),
-    path('comments/<int:pk>/delete/', views.CommentDeleteView.as_view(), name='delete_comment'),
+    path('posts/<int:post_id>/edit_comment/<int:comment_id>/', 
+         views.CommentUpdateView.as_view(), 
+         name='edit_comment'),
+    path('posts/<int:post_id>/delete_comment/<int:comment_id>/', 
+         views.CommentDeleteView.as_view(), 
+         name='delete_comment'),
     
     path('edit_profile/',
          views.ProfileUpdateView.as_view(template_name='blog/create.html'), name='edit_profile'),

@@ -21,13 +21,14 @@ class PostListView(ListView):
 class PostDetailView(DetailView):
     model = Post
     template_name = 'blog/detail.html'
-    
+    pk_url_kwarg = 'pk'
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = CommentForm()  # Передаём реальную форму
+        context['form'] = CommentForm()
         context['comments'] = self.object.comments.all().order_by('created_at')
         return context
-    
+
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         form = CommentForm(request.POST)
@@ -75,46 +76,57 @@ class PostDeleteView(DeleteView):
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
     model = Comment
-    fields = ['text']
-    template_name = 'blog/comment.html'
+    form_class = CommentForm
+    template_name = 'blog/detail.html'
 
     def form_valid(self, form):
-        form.instance.post = get_object_or_404(Post, pk=self.kwargs['post_id'])
+        post = get_object_or_404(Post, pk=self.kwargs['post_id'])
+        form.instance.post = post
         form.instance.author = self.request.user
         return super().form_valid(form)
 
     def get_success_url(self):
         return reverse('blog:post_detail', kwargs={'pk': self.kwargs['post_id']})
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['post'] = get_object_or_404(Post, pk=self.kwargs['post_id'])
-        context['comments'] = context['post'].comments.all().order_by('created_at')
-        return context
 
 class CommentUpdateView(LoginRequiredMixin, UpdateView):
     model = Comment
-    fields = ['text']
+    form_class = CommentForm
     template_name = 'blog/comment.html'
+    
+    def get_object(self, queryset=None):
+        return get_object_or_404(
+            Comment,
+            pk=self.kwargs['comment_id'],
+            post__id=self.kwargs['post_id']
+        )
 
     def dispatch(self, request, *args, **kwargs):
-        if self.get_object().author != request.user:
-            return redirect('post_detail', pk=self.kwargs['pk'])
+        comment = self.get_object()
+        if comment.author != request.user:
+            return redirect('blog:post_detail', pk=comment.post.pk)
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
-        return reverse('post_detail', kwargs={'pk': self.kwargs['pk']})
+        return reverse('blog:post_detail', kwargs={'pk': self.kwargs['post_id']})
 
 class CommentDeleteView(LoginRequiredMixin, DeleteView):
     model = Comment
+    
+    def get_object(self, queryset=None):
+        return get_object_or_404(
+            Comment,
+            pk=self.kwargs['comment_id'],
+            post__id=self.kwargs['post_id']
+        )
 
     def dispatch(self, request, *args, **kwargs):
-        if self.get_object().author != request.user:
-            return redirect('post_detail', pk=self.kwargs['pk'])
+        comment = self.get_object()
+        if comment.author != request.user:
+            return redirect('blog:post_detail', pk=comment.post.pk)
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
-        return reverse('post_detail', kwargs={'pk': self.kwargs['pk']})
+        return reverse('blog:post_detail', kwargs={'pk': self.kwargs['post_id']})
 
 class ProfileView(DetailView):
     model = User
