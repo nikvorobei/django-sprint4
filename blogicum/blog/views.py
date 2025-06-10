@@ -10,6 +10,7 @@ from .models import Post, Comment, Category
 from django.contrib.auth.forms import UserCreationForm
 from .forms import PostForm, CommentForm
 from django.contrib.auth.decorators import login_required
+from django.db.models import Count
 
 User = get_user_model()
 
@@ -17,6 +18,11 @@ class PostListView(ListView):
     model = Post
     template_name = 'blog/index.html'
     paginate_by = 10
+    
+    def get_queryset(self):
+        return Post.objects.annotate(
+            comment_count=Count('comments')
+        ).order_by('-pub_date')
 
 class PostDetailView(DetailView):
     model = Post
@@ -97,7 +103,7 @@ class CommentUpdateView(LoginRequiredMixin, UpdateView):
         return get_object_or_404(
             Comment,
             pk=self.kwargs['comment_id'],
-            post__id=self.kwargs['post_id']
+            post__id=self.kwargs['pk']
         )
 
     def dispatch(self, request, *args, **kwargs):
@@ -107,7 +113,7 @@ class CommentUpdateView(LoginRequiredMixin, UpdateView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
-        return reverse('blog:post_detail', kwargs={'pk': self.kwargs['post_id']})
+        return reverse('blog:post_detail', kwargs={'pk': self.kwargs['pk']})
 
 class CommentDeleteView(LoginRequiredMixin, DeleteView):
     model = Comment
@@ -116,7 +122,7 @@ class CommentDeleteView(LoginRequiredMixin, DeleteView):
         return get_object_or_404(
             Comment,
             pk=self.kwargs['comment_id'],
-            post__id=self.kwargs['post_id']
+            post__id=self.kwargs['pk']
         )
 
     def dispatch(self, request, *args, **kwargs):
@@ -137,7 +143,9 @@ class ProfileView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['posts'] = self.object.posts.all().order_by('-pub_date')
+        context['posts'] = self.object.posts.annotate(
+            comment_count=Count('comments')
+        ).order_by('-pub_date')
         return context
 
 class RegistrationView(CreateView):
