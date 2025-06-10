@@ -24,9 +24,20 @@ class PostDetailView(DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Добавляем заглушку для формы
-        context['form'] = None  
+        context['form'] = CommentForm()  # Передаём реальную форму
+        context['comments'] = self.object.comments.all().order_by('created_at')
         return context
+    
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.post = self.object
+            comment.author = request.user
+            comment.save()
+            return redirect('blog:post_detail', pk=self.object.pk)
+        return self.render_to_response(self.get_context_data(form=form))
 
 class PostCreateView(LoginRequiredMixin, CreateView):
     model = Post
@@ -68,12 +79,18 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
     template_name = 'blog/comment.html'
 
     def form_valid(self, form):
-        form.instance.post = get_object_or_404(Post, pk=self.kwargs['pk'])
+        form.instance.post = get_object_or_404(Post, pk=self.kwargs['post_id'])
         form.instance.author = self.request.user
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse('post_detail', kwargs={'pk': self.kwargs['pk']})
+        return reverse('blog:post_detail', kwargs={'pk': self.kwargs['post_id']})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['post'] = get_object_or_404(Post, pk=self.kwargs['post_id'])
+        context['comments'] = context['post'].comments.all().order_by('created_at')
+        return context
 
 class CommentUpdateView(LoginRequiredMixin, UpdateView):
     model = Comment
