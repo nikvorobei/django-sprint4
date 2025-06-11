@@ -12,6 +12,7 @@ from .forms import PostForm, CommentForm
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.contrib import messages
+from django.http import HttpResponseForbidden
 
 User = get_user_model()
 
@@ -64,6 +65,19 @@ class PostUpdateView(UpdateView):
     form_class = PostForm
     template_name = 'blog/create.html'
     pk_url_kwarg = 'pk'
+
+    def dispatch(self, request, *args, **kwargs):
+        # Для неавторизованных — редирект на /posts/<post_id>/
+        if not request.user.is_authenticated:
+            post_id = kwargs.get('pk')
+            return redirect(f'/posts/{post_id}/')  # Явный редирект на нужный URL
+        
+        # Для авторизованных, но не авторов — 403 Forbidden
+        self.object = self.get_object()
+        if self.object.author != request.user:
+            return HttpResponseForbidden("Нельзя редактировать чужой пост")
+        
+        return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
         return reverse('blog:post_detail', kwargs={'pk': self.object.id})

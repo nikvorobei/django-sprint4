@@ -4,9 +4,22 @@ from django.conf import settings
 from django.conf.urls.static import static
 from blog import views
 from blog.views import PostCreateView
+from django.contrib.auth.views import LogoutView
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth import logout
+from django.shortcuts import redirect
+from django.views.decorators.http import require_GET
+
+
+class CustomLogoutView(LogoutView):
+    http_method_names = ["get", "post", "options"]
+
+    def get(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path("auth/logout/", CustomLogoutView.as_view(), name="logout"),
     path('auth/', include('django.contrib.auth.urls')),
     path('auth/registration/', views.RegistrationView.as_view(), name='registration'),
     path('profile/<str:username>/', views.ProfileView.as_view(), name='profile'),
