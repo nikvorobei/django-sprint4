@@ -70,7 +70,7 @@ class PostUpdateView(UpdateView):
 
 class PostDeleteView(LoginRequiredMixin, DeleteView):
     model = Post
-    template_name = 'blog/detail.html'  # Используем шаблон деталей поста
+    template_name = 'blog/create.html'  # Используем шаблон деталей поста
     pk_url_kwarg = 'pk'
     context_object_name = 'post'
 
@@ -154,9 +154,15 @@ class ProfileView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['posts'] = self.object.posts.annotate(
+        user_posts = self.object.posts.annotate(
             comment_count=Count('comments')
         ).order_by('-pub_date')
+        
+        paginator = Paginator(user_posts, 10)
+        page_number = self.request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        
+        context['page_obj'] = page_obj
         return context
 
 class RegistrationView(CreateView):
