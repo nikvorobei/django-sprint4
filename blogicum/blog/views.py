@@ -11,6 +11,7 @@ from django.contrib.auth.forms import UserCreationForm
 from .forms import PostForm, CommentForm
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
+from django.contrib import messages
 
 User = get_user_model()
 
@@ -62,23 +63,30 @@ class PostUpdateView(UpdateView):
     model = Post
     form_class = PostForm
     template_name = 'blog/create.html'
-    pk_url_kwarg = 'post_id'
+    pk_url_kwarg = 'pk'
 
     def get_success_url(self):
-        return reverse('blog:post_detail', kwargs={'post_id': self.object.id})
+        return reverse('blog:post_detail', kwargs={'pk': self.object.id})
 
-class PostDeleteView(DeleteView):
+class PostDeleteView(LoginRequiredMixin, DeleteView):
     model = Post
-    success_url = reverse_lazy('blog:index')  # Редирект после удаления
+    template_name = 'blog/detail.html'  # Используем шаблон деталей поста
+    pk_url_kwarg = 'pk'
+    context_object_name = 'post'
 
-    def get(self, request, *args, **kwargs):
-        """Пропускаем GET-запрос и сразу удаляем (только через POST)."""
-        return self.post(request, *args, **kwargs)
+    def dispatch(self, request, *args, **kwargs):
+        post = self.get_object()
+        if post.author != request.user:
+            return redirect('blog:post_detail', post_id=post.pk)
+        return super().dispatch(request, *args, **kwargs)
 
-    def delete(self, request, *args, **kwargs):
-        """Добавляем сообщение об успешном удалении."""
-        messages.success(request, 'Пост успешно удалён!')
-        return super().delete(request, *args, **kwargs)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['show_delete_confirmation'] = True  # Флаг для показа подтверждения
+        return context
+
+    def get_success_url(self):
+        return reverse('blog:index')
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
     model = Comment
@@ -86,13 +94,13 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
     template_name = 'blog/detail.html'
 
     def form_valid(self, form):
-        post = get_object_or_404(Post, pk=self.kwargs['post_id'])
+        post = get_object_or_404(Post, pk=self.kwargs['pk'])
         form.instance.post = post
         form.instance.author = self.request.user
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse('blog:post_detail', kwargs={'pk': self.kwargs['post_id']})
+        return reverse('blog:post_detail', kwargs={'pk': self.kwargs['pk']})
 
 class CommentUpdateView(LoginRequiredMixin, UpdateView):
     model = Comment
@@ -117,22 +125,25 @@ class CommentUpdateView(LoginRequiredMixin, UpdateView):
 
 class CommentDeleteView(LoginRequiredMixin, DeleteView):
     model = Comment
-    
-    def get_object(self, queryset=None):
-        return get_object_or_404(
-            Comment,
-            pk=self.kwargs['comment_id'],
-            post__id=self.kwargs['pk']
-        )
+    template_name = 'blog/comment.html'  # Используем шаблон деталей поста
+    pk_url_kwarg = 'comment_id'
 
     def dispatch(self, request, *args, **kwargs):
         comment = self.get_object()
         if comment.author != request.user:
-            return redirect('blog:post_detail', pk=comment.post.pk)
+            return redirect('blog:post_detail', post_id=comment.post.pk)
         return super().dispatch(request, *args, **kwargs)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        post = self.object.post
+        context['post'] = post
+        context['show_comment_delete_confirmation'] = True  # Флаг для подтверждения
+        context['comment_to_delete'] = self.object  # Комментарий для удаления
+        return context
+
     def get_success_url(self):
-        return reverse('blog:post_detail', kwargs={'pk': self.kwargs['post_id']})
+        return reverse('blog:post_detail', kwargs={'pk': self.object.post.pk})
 
 class ProfileView(DetailView):
     model = User
@@ -187,37 +198,3 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     def get_success_url(self):
         return reverse_lazy('blog:profile', kwargs={'username': self.request.user.username})
 
-@login_required
-def profile(request, username):
-    profile = get_object_or_404(User, username=username)
-    post_list = Post.objects.filter(
-    author=profile,
-).order_by('-pub_date')
-    paginator = Paginator(post_list, 10)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    context = {
-        'profile': profile,
-        'page_obj': page_obj,
-    }
-    return render(request, 'blog/profile.html', context)
-
-def post_detail(request, pk):
-    post = get_object_or_404(Post, pk=pk)
-    comments = post.comments.all().order_by('created_at')
-    form = CommentForm(request.POST or None)
-    
-    if request.method == 'POST' and form.is_valid():
-        comment = form.save(commit=False)
-        comment.post = post
-        comment.author = request.user
-        comment.save()
-        return redirect('blog:post_detail', pk=pk)
-    
-    context = {
-        'post': post,
-        'comments': comments,
-        'form': form,
-    }
-    return render(request, 'blog/detail.html', context)
