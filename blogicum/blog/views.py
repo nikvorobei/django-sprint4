@@ -13,6 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.contrib import messages
 from django.http import HttpResponseForbidden
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -22,14 +23,18 @@ class PostListView(ListView):
     paginate_by = 10
     
     def get_queryset(self):
-        return Post.objects.annotate(
+        return Post.objects.filter(
+            is_published=True,
+            pub_date__lte=timezone.now(),
+            category__is_published=True
+        ).select_related('author', 'location', 'category').annotate(
             comment_count=Count('comments')
         ).order_by('-pub_date')
 
 class PostDetailView(DetailView):
     model = Post
     template_name = 'blog/detail.html'
-    pk_url_kwarg = 'pk'
+    pk_url_kwarg = 'post_id'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -80,7 +85,7 @@ class PostUpdateView(UpdateView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
-        return reverse('blog:post_detail', kwargs={'pk': self.object.id})
+        return reverse('blog:post_detail', kwargs={'post_id': self.object.id})
 
 class PostDeleteView(LoginRequiredMixin, DeleteView):
     model = Post
@@ -114,7 +119,7 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse('blog:post_detail', kwargs={'pk': self.kwargs['pk']})
+        return reverse('blog:post_detail', kwargs={'post_id': self.kwargs['pk']})
 
 class CommentUpdateView(LoginRequiredMixin, UpdateView):
     model = Comment
@@ -135,7 +140,7 @@ class CommentUpdateView(LoginRequiredMixin, UpdateView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
-        return reverse('blog:post_detail', kwargs={'pk': self.kwargs['pk']})
+        return reverse('blog:post_detail', kwargs={'post_id': self.kwargs['pk']})
 
 class CommentDeleteView(LoginRequiredMixin, DeleteView):
     model = Comment
@@ -157,7 +162,7 @@ class CommentDeleteView(LoginRequiredMixin, DeleteView):
         return context
 
     def get_success_url(self):
-        return reverse('blog:post_detail', kwargs={'pk': self.object.post.pk})
+        return reverse('blog:post_detail', kwargs={'post_id': self.object.post.pk})
 
 class ProfileView(DetailView):
     model = User
@@ -186,15 +191,26 @@ class RegistrationView(CreateView):
 
 
 def category_posts(request, category_slug):
-    """Показывает все посты в конкретной категории."""
-    category = get_object_or_404(Category, slug=category_slug)
-    post_list = Post.objects.filter(category=category).order_by('-pub_date')
-    
-    # Добавляем пагинацию (по аналогии с PostListView)
-    paginator = Paginator(post_list, 10)  # 10 постов на страницу
+    """Показывает только опубликованные посты в опубликованной категории."""
+    # Проверяем, что категория существует и опубликована
+    category = get_object_or_404(
+        Category,
+        slug=category_slug,
+        is_published=True  # ← Важно: только опубликованные категории
+    )
+
+    # Фильтруем только опубликованные посты с корректной датой
+    post_list = Post.objects.filter(
+        category=category,
+        is_published=True,  # ← Только опубликованные посты
+        pub_date__lte=timezone.now()  # ← Посты с датой <= текущей
+    ).order_by('-pub_date')
+
+    # Пагинация
+    paginator = Paginator(post_list, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
+
     context = {
         'category': category,
         'page_obj': page_obj,

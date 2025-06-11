@@ -11,7 +11,7 @@ urlpatterns = [
     path('', views.PostListView.as_view(), name='index'),
 
     # Детали поста (используем PostDetailView вместо post_detail функции)
-    path('posts/<int:pk>/', PostDetailView.as_view(), name='post_detail'),
+    path('posts/<int:post_id>/', PostDetailView.as_view(), name='post_detail'),
 
     # Категории (если у вас есть CategoryView в views.py)
     path('category/<slug:category_slug>/', views.category_posts, name='category_posts'),
@@ -20,17 +20,17 @@ urlpatterns = [
     path('posts/create/', PostCreateView.as_view(), name='create_post'),
 
     # Редактирование поста
-    path('posts/<int:pk>/edit/', views.PostUpdateView.as_view(), name='post_edit'),
+    path('posts/<int:post_id>/edit/', views.PostUpdateView.as_view(), name='post_edit'),
 
     # Удаление поста
-    path('posts/<int:pk>/delete/', PostDeleteView.as_view(), name='delete_post'),
+    path('posts/<int:post_id>/delete/', PostDeleteView.as_view(), name='delete_post'),
 
     # Комментарии
-    path('posts/<int:pk>/comment/', views.CommentCreateView.as_view(), name='add_comment'),
-    path('posts/<int:pk>/edit_comment/<int:comment_id>/', 
+    path('posts/<int:post_id>/comment/', views.CommentCreateView.as_view(), name='add_comment'),
+    path('posts/<int:post_id>/edit_comment/<int:comment_id>/', 
          views.CommentUpdateView.as_view(), 
          name='edit_comment'),
-    path('posts/<int:pk>/delete_comment/<int:comment_id>/', 
+    path('posts/<int:post_id>/delete_comment/<int:comment_id>/', 
          views.CommentDeleteView.as_view(), 
          name='delete_comment'),
 
