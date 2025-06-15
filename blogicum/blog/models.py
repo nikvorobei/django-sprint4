@@ -3,20 +3,23 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+
 class Category(models.Model):
     title = models.CharField(max_length=256, verbose_name='Заголовок')
     description = models.TextField(verbose_name='Описание')
     slug = models.SlugField(
         unique=True,
         verbose_name='Идентификатор',
-        help_text='Идентификатор страницы для URL; разрешены символы латиницы, цифры, дефис и подчёркивание.'
+        help_text='Идентификатор страницы для URL; '
+        'разрешены символы латиницы, цифры, дефис и подчёркивание.'
     )
     is_published = models.BooleanField(
         default=True,
         verbose_name='Опубликовано',
         help_text='Снимите галочку, чтобы скрыть публикацию.'
     )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Добавлено')
+    created_at = models.DateTimeField(auto_now_add=True,
+                                      verbose_name='Добавлено')
 
     class Meta:
         verbose_name = 'категория'
@@ -25,12 +28,14 @@ class Category(models.Model):
     def __str__(self):
         return self.title
 
+
 class Location(models.Model):
     name = models.CharField(max_length=256)
     is_published = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name
+
 
 class Post(models.Model):
     title = models.CharField(max_length=256)
@@ -43,8 +48,10 @@ class Post(models.Model):
         related_name='posts',
         verbose_name='Автор'
     )
-    location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True)
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True)
+    location = models.ForeignKey(Location,
+                                 on_delete=models.SET_NULL, null=True)
+    category = models.ForeignKey(Category,
+                                 on_delete=models.SET_NULL, null=True)
     image = models.ImageField(upload_to='posts/', blank=True, null=True)
     is_published = models.BooleanField(
         'Опубликовано',
@@ -55,7 +62,6 @@ class Post(models.Model):
     def __str__(self):
         return self.title
 
-from django.db import models
 
 class Comment(models.Model):
     post = models.ForeignKey(
@@ -70,7 +76,8 @@ class Comment(models.Model):
         verbose_name='Автор'
     )
     text = models.TextField(verbose_name='Текст')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Добавлено')
+    created_at = models.DateTimeField(auto_now_add=True,
+                                      verbose_name='Добавлено')
 
     class Meta:
         verbose_name = 'комментарий'

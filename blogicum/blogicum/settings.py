@@ -1,13 +1,12 @@
-import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'ваш_секретный_ключ'
 
-DEBUG = True  # Для кастомных страниц ошибок
+DEBUG = True
 
-ALLOWED_HOSTS = ['*']  # Временно для теста
+ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
