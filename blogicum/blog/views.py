@@ -1,5 +1,5 @@
 from django.http import Http404
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.generic import (
@@ -9,27 +9,17 @@ from django.views.generic import (
     ListView,
     UpdateView,
 )
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count
 
 from blog.constants import PAGINATE_BY
 from blog.forms import CommentForm, PostForm
 from blog.models import Category, Comment, Post
 from blog.services import get_paginator, get_published_posts
+from blog.mixins import AuthorPermissionMixin
 
 User = get_user_model()
-
-
-class AuthorPermissionMixin:
-    """Миксин для проверки авторства."""
-
-    def dispatch(self, request, *args, **kwargs):
-        if self.get_object().author != request.user:
-            return redirect('blog:post_detail', post_id=self.get_object().pk)
-        return super().dispatch(request, *args, **kwargs)
 
 
 class PostListView(ListView):
@@ -39,9 +29,7 @@ class PostListView(ListView):
     ordering = '-pub_date'
 
     def get_queryset(self):
-        return get_published_posts().order_by('-pub_date').select_related(
-            'author', 'location', 'category'
-        ).annotate(comment_count=Count('comments'))
+        return get_published_posts().order_by('-pub_date')
 
 
 class PostDetailView(DetailView):
@@ -51,7 +39,7 @@ class PostDetailView(DetailView):
 
     def get_object(self, queryset=None):
         post = get_object_or_404(
-            Post.objects.select_related('author', 'category'),
+            Post.objects.select_related('author', 'category', 'location'),
             pk=self.kwargs['post_id']
         )
 
@@ -99,7 +87,6 @@ class PostDeleteView(LoginRequiredMixin, AuthorPermissionMixin, DeleteView):
     success_url = reverse_lazy('blog:index')
 
     def get_object(self, queryset=None):
-        """Получаем объект поста с явной проверкой прав"""
         obj = super().get_object(queryset)
         if obj.author != self.request.user:
             raise Http404("У вас нет прав для удаления этого поста")
@@ -151,11 +138,9 @@ class ProfileView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        posts = self.object.posts.annotate(comment_count=Count('comments'))
-
+        posts = self.object.posts.all()
         if self.request.user != self.object:
             posts = get_published_posts(posts)
-
         posts = posts.order_by('-pub_date')
         context['page_obj'] = get_paginator(posts, self.request)
         return context
@@ -173,9 +158,7 @@ def category_posts(request, category_slug):
         slug=category_slug,
         is_published=True
     )
-    posts = get_published_posts(category.posts).annotate(
-        comment_count=Count('comments')
-    ).order_by('-pub_date')
+    posts = get_published_posts(category.posts).order_by('-pub_date')
 
     context = {
         'category': category,

@@ -1,5 +1,7 @@
-from django.db import models
 from django.contrib.auth import get_user_model
+from django.db import models
+
+from blog.constants import TITLE_TRUNCATE_LIMIT
 
 User = get_user_model()
 
@@ -97,13 +99,11 @@ class Comment(models.Model):
     post = models.ForeignKey(
         'Post',
         on_delete=models.CASCADE,
-        related_name='comments',
         verbose_name='Публикация'
     )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='comments',
         verbose_name='Автор'
     )
     text = models.TextField(verbose_name='Текст')
@@ -121,6 +121,6 @@ class Comment(models.Model):
     def __str__(self):
         return (
             f'Комментарий {self.author}: '
-            f'{self.text[:30]}... '
+            f'{self.text[:TITLE_TRUNCATE_LIMIT]}... '
             f'к посту {self.post}'
         )
