@@ -15,9 +15,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 
 from blog.constants import PAGINATE_BY
 from blog.forms import CommentForm, PostForm
+from blog.mixins import AuthorPermissionMixin
 from blog.models import Category, Comment, Post
 from blog.services import get_paginator, get_published_posts
-from blog.mixins import AuthorPermissionMixin
 
 User = get_user_model()
 
